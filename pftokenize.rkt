@@ -31,14 +31,39 @@
     [(list x) x]
     [_
       (define ps (prefixes strs))
+
       (define sorted-ps
         (sort ps #:key car char<?))
-      (map
+      
+      (filter
+       (compose1 not false?)
+       (map
         (lambda (group)
-          (displayln "group")
-          (displayln group)
-          (PFTree
-            (caar group)
-            (prefix-tree
+
+          (define sub-tree
+            (PFTree
+             (caar group)
+             (prefix-tree
               (map cdr group))))
-        (group-by car sorted-ps))]))
+
+          (match sub-tree
+            [(PFTree #\nul #\nul) #f]
+            [_ sub-tree]))
+        
+        (group-by car sorted-ps)))]))
+
+; Compress linear runs of nodes in a prefix-tree
+; such that they are single nodes with the entire suffix left
+(define (compress pftree)
+  (match pftree
+    [(PFTree (? char? left) (? string? right))
+      (format "~a~a" left right)]
+    [(? string?) pftree]
+    [(PFTree root (list (PFTree subroot rest)))
+      (PFTree (format "~a~a" root subroot) (compress rest))]
+    [(PFTree root rest) (PFTree root (compress rest))]
+    [(list (PFTree _ _) ...) (map compress pftree)]))
+
+ (compress
+  (prefix-tree
+  '["abc" "art" "dart" "artsy" "damn"]))
