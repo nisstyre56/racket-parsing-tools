@@ -39,7 +39,6 @@
        (compose1 not false?)
        (map
         (lambda (group)
-
           (define sub-tree
             (PFTree
              (caar group)
@@ -64,6 +63,43 @@
     [(PFTree root rest) (PFTree root (compress rest))]
     [(list (PFTree _ _) ...) (map compress pftree)]))
 
- (compress
+(define (matches-uncomp pftree text)
+  ; Get matches for an uncompressed pftree
+  (define possible-match
+    (cond
+      [(and
+        (string? pftree)
+        (string=? text pftree)) (list text)]
+      [(and
+        (string? pftree)
+        (not (string=? text pftree))) (list #f)]
+      [else
+       (define found
+         (memf
+           (lambda (pft)
+             (match pft
+               [(PFTree r _)
+                (char=? r (str-head text))]
+               [_ (list #f)]))
+           pftree))
+       (define matched
+         (if (not (false? found))
+             (car found)
+             (list found)))
+       (match matched
+         [(list #f) (list #f)]
+         [_ (cons (PFTree-root matched)
+                        (matches-uncomp
+                         (PFTree-children matched)
+                         (str-tail text)))]
+         [else (list #f)])]))
+  (if (not possible-match)
+      (list #f)
+      (if (andmap (compose1 not false?) possible-match)
+          possible-match
+          (list #f))))
+
+(matches-uncomp
   (prefix-tree
-  '["abc" "art" "dart" "artsy" "damn"]))
+  '["abc" "art" "dart" "artsy" "damn"])
+  "artsy yeah")
